@@ -19,6 +19,11 @@ enum direction {
     UP = 0, RIGHT, DOWN, LEFT
 };
 
+/* General constants */
+
+const char *title = "Snake";
+const char *default_font = "fonts/terminus_11x11.bmp";
+
 const enum direction direction_opposite[] = {
     DOWN, LEFT, UP, RIGHT
 };
