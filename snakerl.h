@@ -15,6 +15,7 @@ enum celltype {
 };
 
 enum direction {
+    DIRECTION_NOVALUE = -1,
     UP = 0, RIGHT, DOWN, LEFT
 };
 

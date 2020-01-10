@@ -20,7 +20,7 @@ struct {
 
 vec2i food;
 
-void check_direction(enum direction newdir) {
+void try_direction(enum direction newdir) {
     /* Validate the direction change:
      * Do not change direction to the opposite because that would result in
      * instant collision and wouldn't make much sense, except for when
@@ -32,6 +32,8 @@ void check_direction(enum direction newdir) {
 }
 
 void eventpoll() {
+    enum direction newdirection = DIRECTION_NOVALUE;
+
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
@@ -70,19 +72,23 @@ void eventpoll() {
 
             case SDLK_k:
             case SDLK_UP:
-                gamestate == MENU ? level_selection-- : check_direction(UP);
+                if (gamestate == MENU)
+                    level_selection--;
+                else newdirection = UP;
                 break;
             case SDLK_j:
             case SDLK_DOWN:
-                gamestate == MENU ? level_selection++ : check_direction(DOWN);
+                if (gamestate == MENU)
+                    level_selection++;
+                else newdirection = DOWN;
                 break;
             case SDLK_l:
             case SDLK_RIGHT:
-                check_direction(RIGHT);
+                newdirection = RIGHT;
                 break;
             case SDLK_h:
             case SDLK_LEFT:
-                check_direction(LEFT);
+                newdirection = LEFT;
                 break;
 
             }
@@ -93,6 +99,9 @@ void eventpoll() {
             break;
         }
     }
+
+    if (newdirection != DIRECTION_NOVALUE)
+        try_direction(newdirection);
 }
 
 enum celltype get_celltype(vec2i v) {
@@ -131,6 +140,8 @@ int game_update(enum direction dir) {
     case RIGHT: head.x++; break;
     case DOWN:  head.y++; break;
     case LEFT:  head.x--; break;
+    default:
+        assert(0);
     }
 
     enum celltype head_cell = get_celltype(head);
@@ -244,8 +255,6 @@ void game_free() {
 }
 
 void loop() {
-    int update_ms;
-
     game_init();
 
     uint32_t last_ticks = SDL_GetTicks();
