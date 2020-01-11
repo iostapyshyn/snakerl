@@ -242,7 +242,10 @@ void game_init() {
         rand() % (UI_ROWS/2) + UI_ROWS/4,
     };
 
-    /* Allocate the snake and add the initial segment. */
+    /* If restarting, reset the snake length. */
+    snake.len = 0;
+
+    /* Allocate (if needed) the snake and add the initial segment. */
     snake_push(head);
 
     gamestate = MENU;
