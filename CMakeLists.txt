@@ -11,3 +11,4 @@ set(CMAKE_C_EXTENSIONS no)
 add_executable(snakerl main.c game.c ui.c const.c)
 
 target_link_libraries(snakerl ${SDL2_LIBRARIES})
+target_link_libraries(snakerl m)
