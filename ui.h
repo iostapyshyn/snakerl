@@ -1,8 +1,16 @@
 #ifndef SNAKERL_UI_H
 #define SNAKERL_UI_H
 
+#ifdef TARGET_IOS
+#include "SDL.h"
+#else
 #include <SDL2/SDL.h>
+#endif
+
 #include <stdbool.h>
+
+#define INDEX_BG 0
+#define INDEX_FG 1
 
 typedef struct {
     Uint8 r, g, b;

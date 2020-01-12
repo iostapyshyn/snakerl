@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include <stdbool.h>
 #include <math.h>
 #include "ui.h"
@@ -6,11 +5,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define max(x,y) ((x) >= (y)) ? (x) : (y)
+#define min(x,y) ((x) <= (y)) ? (x) : (y)
+
 #define BITMAP_ROWS 16
 #define BITMAP_COLS 16
-
-#define INDEX_BG 0
-#define INDEX_FG 1
 
 int ui_rows, ui_cols;
 
@@ -29,6 +28,14 @@ struct ui_effects ui_effects = {
     .crt = false,
     .crt_intensity = 0.15,
 };
+
+static inline int ui_getmarginx(void) {
+    return (screen->w - font.char_w*ui_cols)/2;
+}
+
+static inline int ui_getmarginy(void) {
+    return (screen->h - font.char_h*ui_rows)/2;
+}
 
 static void ui_effect_crt(SDL_Surface *screen) {
     double crtk = 1 - ui_effects.crt_intensity;
@@ -105,6 +112,7 @@ void ui_quit(void) {
         SDL_DestroyWindow(window);
 }
 
+/* Passing 0 for w and h assumes the game is run on a portable device. */
 int ui_init(const char *title, const char *filename, int w, int h) {
     if (!ui_loadfont(filename, &font)) {
         return 0;
@@ -115,11 +123,16 @@ int ui_init(const char *title, const char *filename, int w, int h) {
     if (w == 0 || h == 0) {
         SDL_DisplayMode dm;
         SDL_GetCurrentDisplayMode(0, &dm);
-        ui_cols = dm.w / font.char_w;
-        ui_rows = dm.h / font.char_h;
 
-        window_w = dm.w;
-        window_h = dm.h;
+        /* Since the game is designed to run in landscape mode,
+         * we use higher dimension as width and lower as height.
+         * SDL_CreateWindow adjusts the device orientation automatically
+         * based on input parameters. */
+        window_w = max(dm.w, dm.h);
+        window_h = min(dm.w, dm.h);
+
+        ui_cols = window_w / font.char_w;
+        ui_rows = window_h / font.char_h;
     } else {
         ui_cols = w;
         ui_rows = h;
@@ -157,21 +170,30 @@ void ui_setfg(ui_color color) {
 
 void ui_putch(int x, int y, char symbol) {
     unsigned char c = symbol;
-    SDL_Rect srcrect = { (c % BITMAP_COLS) * font.char_w, (c / BITMAP_ROWS) * font.char_h, font.char_w, font.char_h };
-    SDL_Rect dstrect = { x * font.char_w, y*font.char_h, font.char_w, font.char_h };
+    SDL_Rect srcrect = {
+        (c % BITMAP_COLS) * font.char_w,
+        (c / BITMAP_ROWS) * font.char_h,
+        font.char_w, font.char_h
+    };
+
+    SDL_Rect dstrect = {
+        ui_getmarginx() + x * font.char_w,
+        ui_getmarginy() + y * font.char_h,
+        font.char_w, font.char_h
+    };
 
     SDL_BlitSurface(font.bitmap, &srcrect, screen, &dstrect);
 }
 
 void ui_putstr(int x, int y, const char *str) {
     for (const char *ptr = str; *ptr != '\0' && x < ui_cols; ptr++)
-        ui_putch(x+ptr-str, y, *ptr);
+        ui_putch(x+(ptr-str), y, *ptr);
 }
 
 void ui_clear(void) {
     SDL_Rect fillrect = {
-        0,
-        0,
+        (screen->w - font.char_w*ui_cols)/2,
+        (screen->h - font.char_h*ui_rows)/2,
         font.char_w*ui_cols,
         font.char_h*ui_rows
     };
@@ -185,6 +207,7 @@ void ui_clear(void) {
 }
 
 void ui_present(void) {
-    if (ui_effects.crt) ui_effect_crt(screen);
+    if (ui_effects.crt)
+        ui_effect_crt(screen);
     SDL_UpdateWindowSurface(window);
 }

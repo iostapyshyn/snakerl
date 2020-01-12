@@ -20,7 +20,7 @@ void eventpoll() {
                     break;
             case SDLK_ESCAPE:
                 /* Always exits the game. */
-                game_state = QUIT;
+                g.state = QUIT;
                 break;
             case SDLK_RETURN:
                 game_continue();
@@ -41,24 +41,24 @@ void eventpoll() {
 
             case SDLK_k:
             case SDLK_UP:
-                if (game_state == MENU)
-                    game_level--;
+                if (g.state == MENU)
+                    g.level--;
                 else newdir = UP;
                 break;
             case SDLK_j:
             case SDLK_DOWN:
-                if (game_state == MENU)
-                    game_level++;
+                if (g.state == MENU)
+                    g.level++;
                 else newdir = DOWN;
                 break;
             case SDLK_l:
             case SDLK_RIGHT:
-                if (game_state == RUNNING)
+                if (g.state == RUNNING)
                     newdir = RIGHT;
                 break;
             case SDLK_h:
             case SDLK_LEFT:
-                if (game_state == RUNNING)
+                if (g.state == RUNNING)
                     newdir = LEFT;
                 break;
 
@@ -66,7 +66,7 @@ void eventpoll() {
 
             break;
         case SDL_QUIT:
-            game_state = QUIT;
+            g.state = QUIT;
             break;
         }
     }
@@ -74,6 +74,53 @@ void eventpoll() {
     /* Update the direction only once per eventpoll. */
     if (newdir != DIRECTION_NOVALUE)
         game_setdirection(newdir);
+}
+
+void draw(void) {
+    if (g.state == MENU) {
+        const int menu_x = ui_cols/2 - ARR_SIZE(menu_str)/2;
+        const int menu_y = ui_rows/2 - nlevels/2;
+
+        /* Present the level selection menu. */
+        ui_clear();
+
+        ui_setfg(color_fg);
+        ui_putstr(menu_x, menu_y, menu_str);
+        for (int i = 0; i < nlevels; i++) {
+            if (i == g.level) {
+                /* Show current selection with color and arrow. */
+                ui_setfg(color_message);
+                ui_putstr(menu_x - 3, menu_y + 1 + i, "->");
+            } else ui_setfg(color_fg);
+            ui_putstr(menu_x, menu_y + 1 + i, levels[i].desc);
+        }
+
+        ui_present();
+        return;
+    }
+
+    ui_clear();
+    ui_setfg(color_fg);
+
+    /* Draw the snake. The symbol selection algorithm chooses appropriate symbol for turns,
+     * see segment_symbol(int) in const.c. */
+    for (int i = g.snake.len-1; i >= 0; i--) {
+        ui_putch(g.snake.seg[i].x, g.snake.seg[i].y, segment_symbol(i));
+    }
+
+    /* Display food. */
+    ui_putch(g.food.x, g.food.y, food_symbol);
+
+    /* Draw game over and pause messages on top, keeping the snake as the background. */
+    if (g.state == LOST) {
+        ui_setfg(color_message);
+        ui_putstr(ui_cols/2-ARR_SIZE(lost_str)/2, ui_rows/2, lost_str);
+    } else if (g.state == PAUSE) {
+        ui_setfg(color_message);
+        ui_putstr(ui_cols/2-ARR_SIZE(pause_str)/2, ui_rows/2, pause_str);
+    }
+
+    ui_present();
 }
 
 int main(int argc, char *argv[]) {
@@ -89,7 +136,7 @@ int main(int argc, char *argv[]) {
 
     ui_effects.crt = true;
 
-    game_run(eventpoll);
+    game_run(eventpoll, draw);
 
     ui_quit();
 

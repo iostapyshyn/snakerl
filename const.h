@@ -41,4 +41,17 @@ static const char pause_str[] = "*PAUSE*";
 static const char lost_str[] = "Game Over.";
 static const char menu_str[] = "Select the difficulty level:";
 
+/* Difficulty levels */
+struct level {
+    const char *desc;
+    unsigned int update_ms;
+    bool wall_collisions;
+};
+
+extern const struct level levels[];
+extern const int nlevels;
+
+/* Utility functions. */
+char segment_symbol(size_t i);
+
 #endif
