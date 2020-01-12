@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "snakerl.h"
+#include "game.h"
 #include "const.h"
 
 void eventpoll() {
@@ -20,20 +20,13 @@ void eventpoll() {
                     break;
             case SDLK_ESCAPE:
                 /* Always exits the game. */
-                gamestate = QUIT;
+                game_state = QUIT;
                 break;
             case SDLK_RETURN:
-                /* Selects the level or restarts the game if the game is over. */
-                if (gamestate == LOST) {
-                    gamestate = RESTART;
-                } else gamestate = RUNNING;
+                game_continue();
                 break;
             case SDLK_p:
-                /* Pause. */
-                if (gamestate == RUNNING)
-                    gamestate = PAUSE;
-                else if (gamestate == PAUSE)
-                    gamestate = RUNNING;
+                game_pause();
                 break;
             case SDLK_c:
                 /* Disable CRT effect. */
@@ -48,24 +41,24 @@ void eventpoll() {
 
             case SDLK_k:
             case SDLK_UP:
-                if (gamestate == MENU)
-                    level_selection--;
+                if (game_state == MENU)
+                    game_level--;
                 else newdir = UP;
                 break;
             case SDLK_j:
             case SDLK_DOWN:
-                if (gamestate == MENU)
-                    level_selection++;
+                if (game_state == MENU)
+                    game_level++;
                 else newdir = DOWN;
                 break;
             case SDLK_l:
             case SDLK_RIGHT:
-                if (gamestate == RUNNING)
+                if (game_state == RUNNING)
                     newdir = RIGHT;
                 break;
             case SDLK_h:
             case SDLK_LEFT:
-                if (gamestate == RUNNING)
+                if (game_state == RUNNING)
                     newdir = LEFT;
                 break;
 
@@ -73,14 +66,14 @@ void eventpoll() {
 
             break;
         case SDL_QUIT:
-            gamestate = QUIT;
+            game_state = QUIT;
             break;
         }
     }
 
     /* Update the direction only once per eventpoll. */
     if (newdir != DIRECTION_NOVALUE)
-        try_direction(newdir);
+        game_setdirection(newdir);
 }
 
 int main(int argc, char *argv[]) {
@@ -89,18 +82,17 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    ui_cols = 50;
-    ui_rows = 25;
-
     const char *font = argc > 1 ? argv[1] : default_font;
 
-    if (!ui_init(title, font, &ui_cols, &ui_rows))
+    if (!ui_init(title, font, UI_COLS, UI_ROWS))
         return 1;
 
     ui_effects.crt = true;
 
-    loop();
+    game_run(eventpoll);
 
     ui_quit();
+
+    SDL_Quit();
     return 0;
 }

@@ -12,7 +12,7 @@
 #define INDEX_BG 0
 #define INDEX_FG 1
 
-int window_rows, window_cols;
+int ui_rows, ui_cols;
 
 typedef struct {
     SDL_Surface *bitmap;
@@ -25,7 +25,7 @@ ui_font font;
 SDL_Window *window;
 SDL_Surface *screen;
 
-struct effects ui_effects = {
+struct ui_effects ui_effects = {
     .crt = false,
     .crt_intensity = 0.15,
 };
@@ -103,27 +103,30 @@ void ui_quit(void) {
 
     if (window != NULL)
         SDL_DestroyWindow(window);
-
-    SDL_Quit();
 }
 
-int ui_init(const char *title, const char *filename, int *w, int *h) {
+int ui_init(const char *title, const char *filename, int w, int h) {
     if (!ui_loadfont(filename, &font)) {
         return 0;
     }
 
-    if (*w == 0 || *h == 0) {
+    int window_w, window_h;
+
+    if (w == 0 || h == 0) {
         SDL_DisplayMode dm;
         SDL_GetCurrentDisplayMode(0, &dm);
-        *w = dm.w / font.char_w;
-        *h = dm.h / font.char_h;
+        ui_cols = dm.w / font.char_w;
+        ui_rows = dm.h / font.char_h;
+
+        window_w = dm.w;
+        window_h = dm.h;
+    } else {
+        ui_cols = w;
+        ui_rows = h;
+
+        window_w = font.char_w * ui_cols;
+        window_h = font.char_h * ui_rows;
     }
-
-    window_cols = *w;
-    window_rows = *h;
-
-    int window_w = font.char_w * window_cols;
-    int window_h = font.char_h * window_rows;
 
     window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, 0);
     if (window == NULL) {
@@ -133,26 +136,13 @@ int ui_init(const char *title, const char *filename, int *w, int *h) {
     }
 
     screen = SDL_GetWindowSurface(window);
+    if (screen == NULL) {
+        SDL_Log("Unable to get window surface: %s", SDL_GetError());
+        ui_quit();
+        return 0;
+    }
 
     return 1;
-}
-
-ui_color ui_getbg(void) {
-    ui_color bg = {
-        font.palette[INDEX_BG].r,
-        font.palette[INDEX_BG].g,
-        font.palette[INDEX_BG].b,
-    };
-    return bg;
-}
-
-ui_color ui_getfg(void) {
-    ui_color fg = {
-        font.palette[INDEX_FG].r,
-        font.palette[INDEX_FG].g,
-        font.palette[INDEX_FG].b,
-    };
-    return fg;
 }
 
 void ui_setbg(ui_color color) {
@@ -174,16 +164,24 @@ void ui_putch(int x, int y, char symbol) {
 }
 
 void ui_putstr(int x, int y, const char *str) {
-    for (const char *ptr = str; *ptr != '\0' && x < window_cols; ptr++)
+    for (const char *ptr = str; *ptr != '\0' && x < ui_cols; ptr++)
         ui_putch(x+ptr-str, y, *ptr);
 }
 
 void ui_clear(void) {
-    SDL_FillRect(screen, NULL, SDL_MapRGBA(screen->format,
-                                           font.palette[INDEX_BG].r,
-                                           font.palette[INDEX_BG].g,
-                                           font.palette[INDEX_BG].b,
-                                           SDL_ALPHA_OPAQUE));
+    SDL_Rect fillrect = {
+        0,
+        0,
+        font.char_w*ui_cols,
+        font.char_h*ui_rows
+    };
+
+    SDL_FillRect(screen, &fillrect, SDL_MapRGBA(
+                     screen->format,
+                     font.palette[INDEX_BG].r,
+                     font.palette[INDEX_BG].g,
+                     font.palette[INDEX_BG].b,
+                     SDL_ALPHA_OPAQUE));
 }
 
 void ui_present(void) {
