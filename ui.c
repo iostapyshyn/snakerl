@@ -107,19 +107,20 @@ void ui_quit(void) {
     SDL_Quit();
 }
 
-int ui_init(const char *title, const char *filename, int w, int h) {
-    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) < 0) {
-        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-        return 0;
-    }
-
+int ui_init(const char *title, const char *filename, int *w, int *h) {
     if (!ui_loadfont(filename, &font)) {
-        SDL_Quit();
         return 0;
     }
 
-    window_cols = w;
-    window_rows = h;
+    if (*w == 0 || *h == 0) {
+        SDL_DisplayMode dm;
+        SDL_GetCurrentDisplayMode(0, &dm);
+        *w = dm.w / font.char_w;
+        *h = dm.h / font.char_h;
+    }
+
+    window_cols = *w;
+    window_rows = *h;
 
     int window_w = font.char_w * window_cols;
     int window_h = font.char_h * window_rows;

@@ -15,7 +15,7 @@ struct effects {
 
 extern struct effects ui_effects;
 
-int ui_init(const char *title, const char *filename, int w, int h);
+int ui_init(const char *title, const char *filename, int *w, int *h);
 void ui_quit(void);
 
 ui_color ui_getbg(void);

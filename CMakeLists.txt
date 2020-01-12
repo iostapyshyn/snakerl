@@ -8,6 +8,6 @@ set(CMAKE_C_STANDARD_REQUIRED yes)
 set(CMAKE_C_EXTENSIONS no)
 
 # Examples
-add_executable(snakerl snakerl.c ui.c)
+add_executable(snakerl main.c snakerl.c ui.c)
 
 target_link_libraries(snakerl ${SDL2_LIBRARIES})

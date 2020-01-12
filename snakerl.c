@@ -1,119 +1,57 @@
-#include <SDL2/SDL.h>
 #include <stdbool.h>
 #include <assert.h>
-
 #include "snakerl.h"
+#include "const.h"
 
-static enum {
-    MENU, RUNNING, PAUSE, LOST, RESTART, QUIT
-} gamestate;
+const direction direction_opposite[] = {
+    DOWN, LEFT, UP, RIGHT
+};
 
+typedef enum {
+    EMPTY, SNAKE, WALL, FOOD
+} cell_type;
+
+typedef struct {
+    int32_t x, y;
+} vec2i;
+
+int ui_cols, ui_rows;
 int level_selection = 0;
 bool force_update = false;
-enum direction direction;
+gamestate_t gamestate;
 
 struct {
     size_t len;
     size_t cap;
     vec2i *seg;
+    direction dir;
 } snake = { 0, 0, NULL };
+
+void eventpoll(void);
 
 vec2i food;
 
-void try_direction(enum direction newdir) {
-    assert(direction != DIRECTION_NOVALUE);
+void try_direction(direction newdir) {
+    assert(newdir != DIRECTION_NOVALUE);
     /* Validate the direction change:
      * Do not change direction to the opposite because that would result in
      * instant collision and wouldn't make much sense, except for when
      * the snake is 1 tile long. */
-    if (snake.len == 1 || direction_opposite[newdir] != direction) {
-        /* force_update guarantees instant turns and more pleasurable experience. */
+    if (snake.len == 1 || direction_opposite[newdir] != snake.dir) {
+        /* force_update guarantees instant turns and more pleasant experience. */
         force_update = true;
-        direction = newdir;
+        snake.dir = newdir;
     }
 }
 
-void eventpoll() {
-    enum direction newdirection = DIRECTION_NOVALUE;
-
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        switch (e.type) {
-
-        case SDL_KEYUP:
-            switch (e.key.keysym.sym) {
-
-            case SDLK_q:
-                if ((e.key.keysym.mod & KMOD_LSHIFT) != KMOD_LSHIFT)
-                    break;
-            case SDLK_ESCAPE:
-                /* Always exits the game. */
-                gamestate = QUIT;
-                break;
-            case SDLK_RETURN:
-                /* Exits the menu or leaves the game if the game is over. */
-                if (gamestate == LOST) {
-                    gamestate = RESTART;
-                } else gamestate = RUNNING;
-                break;
-            case SDLK_p:
-                if (gamestate == RUNNING)
-                    gamestate = PAUSE;
-                else if (gamestate == PAUSE)
-                    gamestate = RUNNING;
-                break;
-            case SDLK_c:
-                ui_effects.crt = !ui_effects.crt;
-                break;
-
-            }
-
-            break;
-        case SDL_KEYDOWN:
-            switch (e.key.keysym.sym) {
-
-            case SDLK_k:
-            case SDLK_UP:
-                if (gamestate == MENU)
-                    level_selection--;
-                else newdirection = UP;
-                break;
-            case SDLK_j:
-            case SDLK_DOWN:
-                if (gamestate == MENU)
-                    level_selection++;
-                else newdirection = DOWN;
-                break;
-            case SDLK_l:
-            case SDLK_RIGHT:
-                newdirection = RIGHT;
-                break;
-            case SDLK_h:
-            case SDLK_LEFT:
-                newdirection = LEFT;
-                break;
-
-            }
-
-            break;
-        case SDL_QUIT:
-            gamestate = QUIT;
-            break;
-        }
-    }
-
-    if (newdirection != DIRECTION_NOVALUE)
-        try_direction(newdirection);
-}
-
-enum celltype get_celltype(vec2i v) {
+cell_type cell_gettype(vec2i v) {
     if (v.x == food.x && v.y == food.y)
         return FOOD;
 
-    if (v.x >= UI_COLS || v.x < 0 ||
-        v.y >= UI_ROWS || v.y < 0) return WALL;
+    if (v.x >= ui_cols || v.x < 0 ||
+        v.y >= ui_rows || v.y < 0) return WALL;
 
-    for (int i = 0; i < snake.len; i++) {
+    for (size_t i = 0; i < snake.len; i++) {
         if (v.x == snake.seg[i].x && v.y == snake.seg[i].y)
             return SNAKE;
     }
@@ -131,10 +69,10 @@ void snake_push(vec2i segment) {
     snake.seg[snake.len++] = segment;
 }
 
-int game_update(enum direction dir) {
+void game_update() {
     /* The position of the head after the movement. */
     vec2i head = snake.seg[0];
-    switch (dir) {
+    switch (snake.dir) {
     case UP:    head.y--; break;
     case RIGHT: head.x++; break;
     case DOWN:  head.y++; break;
@@ -144,28 +82,30 @@ int game_update(enum direction dir) {
     }
 
     /* If the wall collisions are disabled, make a transition to the opposite wall. */
-    enum celltype head_cell = get_celltype(head);
+    cell_type head_cell = cell_gettype(head);
     if (head_cell == WALL && levels[level_selection].wall_collisions == false) {
-        if (head.x >= UI_COLS)
-            head.x -= UI_COLS;
+        if (head.x >= ui_cols)
+            head.x -= ui_cols;
         if (head.x < 0)
-            head.x += UI_COLS;
+            head.x += ui_cols;
 
-        if (head.y >= UI_ROWS)
-            head.y -= UI_COLS;
+        if (head.y >= ui_rows)
+            head.y -= ui_cols;
         if (head.y < 0)
-            head.y += UI_ROWS;
+            head.y += ui_rows;
 
-        head_cell = get_celltype(head);
+        head_cell = cell_gettype(head);
     }
 
-    /* Check for collisions and return 0 if dead. */
-    if (head_cell == SNAKE || (levels[level_selection].wall_collisions ? head_cell == WALL : false))
-        return 0;
+    /* Check if the game is over. */
+    if (head_cell == SNAKE || (levels[level_selection].wall_collisions ? head_cell == WALL : false)) {
+        gamestate = LOST;
+        return;
+    }
 
     /* Move all the consequent members. */
     vec2i prev = head;
-    for (int i = 0; i < snake.len; i++) {
+    for (size_t i = 0; i < snake.len; i++) {
         vec2i tmp = snake.seg[i];
         snake.seg[i] = prev;
         prev = tmp;
@@ -177,12 +117,10 @@ int game_update(enum direction dir) {
         /* Generate new food. Make sure it generates on empty tile. */
         vec2i newfood;
         do {
-            newfood = (vec2i) { rand() % UI_COLS, rand() % UI_ROWS };
-        } while (get_celltype(newfood) != EMPTY);
+            newfood = (vec2i) { rand() % ui_cols, rand() % ui_rows };
+        } while (cell_gettype(newfood) != EMPTY);
         food = newfood;
     }
-
-    return 1;
 }
 
 char snake_segment_symbol(size_t i) {
@@ -235,14 +173,14 @@ void game_init() {
     srand(time(NULL));
 
     /* Randomize initial parameters. */
-    direction = rand() % 4;
-    food = (vec2i) { rand() % UI_COLS, rand() % UI_ROWS };
+    snake.dir = rand() % 4;
+    food = (vec2i) { rand() % ui_cols, rand() % ui_rows };
     vec2i head = {
-        rand() % (UI_COLS/2) + UI_COLS/4,
-        rand() % (UI_ROWS/2) + UI_ROWS/4,
+        rand() % (ui_cols/2) + ui_cols/4,
+        rand() % (ui_rows/2) + ui_rows/4,
     };
 
-    /* If restarting, reset the snake length. */
+    /* Reset the snake length. */
     snake.len = 0;
 
     /* Allocate (if needed) the snake and add the initial segment. */
@@ -268,20 +206,20 @@ void loop() {
         }
 
         if (gamestate == MENU) {
-            if ((signed int) level_selection > LEVEL_HARD)
-                level_selection = LEVEL_EASY;
-            else if ((signed int) level_selection < LEVEL_EASY)
-                level_selection = LEVEL_HARD;
+            if ((signed int) level_selection > ARR_SIZE(levels)-1)
+                level_selection = 0;
+            else if ((signed int) level_selection < 0)
+                level_selection = ARR_SIZE(levels)-1;
 
-            const int menu_x = UI_COLS/2 - strlen(menu_str)/2;
-            const int menu_y = UI_ROWS/2 - sizeof(levels)/sizeof(*levels);
+            const int menu_x = ui_cols/2 - ARR_SIZE(menu_str)/2;
+            const int menu_y = ui_rows/2 - ARR_SIZE(levels)/2;
 
             /* Present the level selection menu. */
             ui_clear();
 
             ui_setfg(color_fg);
             ui_putstr(menu_x, menu_y, menu_str);
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < ARR_SIZE(levels); i++) {
                 if (i == level_selection) {
                     /* Show current selection with color and arrow. */
                     ui_setfg(color_message);
@@ -297,49 +235,35 @@ void loop() {
         uint32_t now_ticks = SDL_GetTicks();
         if (gamestate == RUNNING &&
             (force_update || now_ticks - last_ticks > levels[level_selection].update_ms)) {
-
+            /* Update. */
             force_update = false;
             last_ticks = now_ticks;
-            if (!game_update(direction)) {
-                gamestate = LOST;
-            }
+            game_update();
         }
 
         ui_clear();
         ui_setfg(color_fg);
 
-        /* Draw the snake. The symbol selection algorithm is too long to put it here. */
-        for (int i = 0; i < snake.len; i++) {
+        /* Draw the snake. The symbol selection algorithm chooses appropriate symbol for turns,
+         * see snake_segment_symbol(int). */
+        for (size_t i = 0; i < snake.len; i++) {
             ui_putch(snake.seg[i].x, snake.seg[i].y, snake_segment_symbol(i));
         }
 
+        /* Display food. */
         ui_putch(food.x, food.y, food_symbol);
 
+        /* Draw game over and pause messages on top, keeping the snake as the background. */
         if (gamestate == LOST) {
             ui_setfg(color_message);
-            ui_putstr(UI_COLS/2-strlen(lost_str)/2, UI_ROWS/2, lost_str);
+            ui_putstr(ui_cols/2-ARR_SIZE(lost_str)/2, ui_rows/2, lost_str);
         } else if (gamestate == PAUSE) {
             ui_setfg(color_message);
-            ui_putstr(UI_COLS/2-strlen(pause_str)/2, UI_ROWS/2, pause_str);
+            ui_putstr(ui_cols/2-ARR_SIZE(pause_str)/2, ui_rows/2, pause_str);
         }
 
         ui_present();
     }
 
-    /* Since the snake array is dynamically allocated: */
     game_free();
-}
-
-int main(int argc, char *argv[]) {
-    const char *font = argc > 1 ? argv[1] : default_font;
-
-    if (!ui_init(title, font, UI_COLS, UI_ROWS))
-        return 1;
-
-    ui_effects.crt = true;
-
-    loop();
-
-    ui_quit();
-    return 0;
 }
