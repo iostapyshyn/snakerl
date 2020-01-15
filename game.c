@@ -29,17 +29,8 @@ void game_pause(void) {
 }
 
 void game_setdirection(direction newdir) {
-    static const direction direction_opposite[] = {
-        DOWN, LEFT, UP, RIGHT
-    };
-
-    assert(newdir != DIRECTION_NOVALUE);
-    /* Validate the direction change:
-     * Do not change direction to the opposite because that would result in
-     * instant collision and wouldn't make much sense, except for when
-     * the snake is 1 tile long. */
-    if (g.snake.len == 1 || direction_opposite[newdir] != g.dir) {
-        /* force_update guarantees instant turns and more pleasant experience. */
+    if (((newdir == UP || newdir == DOWN) && (g.dir == LEFT || g.dir == RIGHT)) ||
+        ((newdir == LEFT || newdir == RIGHT) && (g.dir == UP || g.dir == DOWN))) {
         force_update = true;
         g.dir = newdir;
     }
@@ -76,16 +67,28 @@ static void game_init() {
     /* Randomize initial parameters. */
     g.dir = rand() % 4;
     g.food = (vec2i) { rand() % ui_cols, rand() % ui_rows };
-    vec2i head = {
-        rand() % (ui_cols/2) + ui_cols/4,
-        rand() % (ui_rows/2) + ui_rows/4,
-    };
 
     /* Reset the snake length. */
     g.snake.len = 0;
 
+    vec2i seg = {
+        rand() % (ui_cols/2) + ui_cols/4,
+        rand() % (ui_rows/2) + ui_rows/4,
+    };
+
     /* Allocate (if needed) the snake and add the initial segment. */
-    snake_push(head);
+    snake_push(seg);
+
+    /* Generate a tail in opposite direction of the initial movement. */
+    switch (g.dir) {
+    case UP:    seg.y++; break;
+    case RIGHT: seg.x--; break;
+    case DOWN:  seg.y--; break;
+    case LEFT:  seg.x++; break;
+    default: assert(0);
+    }
+
+    snake_push(seg);
 
     g.state = MENU;
 }
@@ -96,7 +99,7 @@ static void game_update() {
     for (size_t i = g.snake.len-1; i > 0; i--) {
         g.snake.seg[i] = g.snake.seg[i-1];
     }
-    
+
     /* The position of the head after the movement. */
     switch (g.dir) {
     case UP:    g.snake.seg[0].y--; break;
@@ -106,7 +109,7 @@ static void game_update() {
     default:
         assert(0);
     }
-    
+
     /* If the wall collisions are disabled, make a transition to the opposite wall. */
     cell_type head_cell = cell_gettype(g.snake.seg[0]);
     if (head_cell == WALL && levels[g.level].wall_collisions == false) {

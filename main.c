@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#include "stb_image.h"
+
 #include "game.h"
 #include "const.h"
 
@@ -43,23 +45,23 @@ void eventpoll() {
             case SDLK_UP:
                 if (g.state == MENU)
                     g.level--;
-                else newdir = UP;
+
+                newdir = UP;
                 break;
             case SDLK_j:
             case SDLK_DOWN:
                 if (g.state == MENU)
                     g.level++;
-                else newdir = DOWN;
+
+                newdir = DOWN;
                 break;
             case SDLK_l:
             case SDLK_RIGHT:
-                if (g.state == RUNNING)
-                    newdir = RIGHT;
+                newdir = RIGHT;
                 break;
             case SDLK_h:
             case SDLK_LEFT:
-                if (g.state == RUNNING)
-                    newdir = LEFT;
+                newdir = LEFT;
                 break;
 
             }
@@ -72,8 +74,10 @@ void eventpoll() {
     }
 
     /* Update the direction only once per eventpoll. */
-    if (newdir != DIRECTION_NOVALUE)
+    if (newdir != DIRECTION_NOVALUE && (g.state == RUNNING || g.state == PAUSE)) {
+        g.state = RUNNING;
         game_setdirection(newdir);
+    }
 }
 
 void draw(void) {

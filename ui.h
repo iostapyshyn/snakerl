@@ -23,6 +23,8 @@ struct ui_effects {
 
 extern struct ui_effects ui_effects;
 extern int ui_rows, ui_cols;
+extern SDL_Window *ui_window;
+extern SDL_Surface *ui_surface;
 
 int ui_init(const char *title, const char *filename, int w, int h);
 void ui_quit(void);

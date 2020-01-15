@@ -11,30 +11,30 @@
 #define BITMAP_ROWS 16
 #define BITMAP_COLS 16
 
-int ui_rows, ui_cols;
-
 typedef struct {
     SDL_Surface *bitmap;
     SDL_Color palette[2];
     int char_w, char_h;
 } ui_font;
 
-ui_font font;
+SDL_Window *ui_window;
+SDL_Surface *ui_surface;
 
-SDL_Window *window;
-SDL_Surface *screen;
+int ui_rows, ui_cols;
 
 struct ui_effects ui_effects = {
     .crt = false,
     .crt_intensity = 0.15,
 };
 
-static inline int ui_getmarginx(void) {
-    return (screen->w - font.char_w*ui_cols)/2;
+static ui_font font;
+
+static inline int ui_getmargin_w(void) {
+    return (ui_surface->w - font.char_w*ui_cols)/2;
 }
 
-static inline int ui_getmarginy(void) {
-    return (screen->h - font.char_h*ui_rows)/2;
+static inline int ui_getmargin_h(void) {
+    return (ui_surface->h - font.char_h*ui_rows)/2;
 }
 
 static void ui_effect_crt(SDL_Surface *screen) {
@@ -108,8 +108,8 @@ static int ui_loadfont(const char *filename, ui_font *font) {
 void ui_quit(void) {
     SDL_FreeSurface(font.bitmap);
 
-    if (window != NULL)
-        SDL_DestroyWindow(window);
+    if (ui_window != NULL)
+        SDL_DestroyWindow(ui_window);
 }
 
 /* Passing 0 for w and h assumes the game is run on a portable device. */
@@ -141,15 +141,15 @@ int ui_init(const char *title, const char *filename, int w, int h) {
         window_h = font.char_h * ui_rows;
     }
 
-    window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, 0);
-    if (window == NULL) {
+    ui_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, 0);
+    if (ui_window == NULL) {
         SDL_Log("Unable to create window: %s", SDL_GetError());
         ui_quit();
         return 0;
     }
 
-    screen = SDL_GetWindowSurface(window);
-    if (screen == NULL) {
+    ui_surface = SDL_GetWindowSurface(ui_window);
+    if (ui_surface == NULL) {
         SDL_Log("Unable to get window surface: %s", SDL_GetError());
         ui_quit();
         return 0;
@@ -177,12 +177,12 @@ void ui_putch(int x, int y, char symbol) {
     };
 
     SDL_Rect dstrect = {
-        ui_getmarginx() + x * font.char_w,
-        ui_getmarginy() + y * font.char_h,
+        ui_getmargin_w() + x * font.char_w,
+        ui_getmargin_h() + y * font.char_h,
         font.char_w, font.char_h
     };
 
-    SDL_BlitSurface(font.bitmap, &srcrect, screen, &dstrect);
+    SDL_BlitSurface(font.bitmap, &srcrect, ui_surface, &dstrect);
 }
 
 void ui_putstr(int x, int y, const char *str) {
@@ -191,15 +191,8 @@ void ui_putstr(int x, int y, const char *str) {
 }
 
 void ui_clear(void) {
-    SDL_Rect fillrect = {
-        (screen->w - font.char_w*ui_cols)/2,
-        (screen->h - font.char_h*ui_rows)/2,
-        font.char_w*ui_cols,
-        font.char_h*ui_rows
-    };
-
-    SDL_FillRect(screen, &fillrect, SDL_MapRGBA(
-                     screen->format,
+    SDL_FillRect(ui_surface, NULL, SDL_MapRGBA(
+                     ui_surface->format,
                      font.palette[INDEX_BG].r,
                      font.palette[INDEX_BG].g,
                      font.palette[INDEX_BG].b,
@@ -208,6 +201,6 @@ void ui_clear(void) {
 
 void ui_present(void) {
     if (ui_effects.crt)
-        ui_effect_crt(screen);
-    SDL_UpdateWindowSurface(window);
+        ui_effect_crt(ui_surface);
+    SDL_UpdateWindowSurface(ui_window);
 }
