@@ -2,8 +2,6 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "stb_image.h"
-
 #include "game.h"
 #include "const.h"
 
@@ -34,7 +32,6 @@ void eventpoll() {
                 /* Disable CRT effect. */
                 ui_effects.crt = !ui_effects.crt;
                 break;
-
             }
 
             break;
@@ -67,6 +64,7 @@ void eventpoll() {
             }
 
             break;
+
         case SDL_QUIT:
             g.state = QUIT;
             break;
@@ -87,7 +85,7 @@ void draw(void) {
 
         /* Present the level selection menu. */
         ui_clear();
-
+#if 0
         ui_setfg(color_fg);
         ui_putstr(menu_x, menu_y, menu_str);
         for (int i = 0; i < nlevels; i++) {
@@ -98,6 +96,8 @@ void draw(void) {
             } else ui_setfg(color_fg);
             ui_putstr(menu_x, menu_y + 1 + i, levels[i].desc);
         }
+#endif
+        ui_putstr(ui_cols/2-sizeof("LOADING...")/2, ui_rows/2, "LOADING...");
 
         ui_present();
         return;
