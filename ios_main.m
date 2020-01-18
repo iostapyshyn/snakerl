@@ -11,6 +11,7 @@
 
 #define BUTTON_W 22
 #define BUTTON_H 22
+#define BUTTON_MARGIN 10
 
 SDL_Surface *arrow_tex;
 SDL_Surface *pause_tex;
@@ -40,7 +41,7 @@ int app_init() {
     retry_tex = ui_loadtexture("res/retry.png");
 
     /* Set up the target rectangle area for the button in the top-left corner. */
-    button_rect = (SDL_Rect) { ui_surface->w - BUTTON_W, 0, BUTTON_W, BUTTON_H };
+    button_rect = (SDL_Rect) { ui_surface->w - 16 - BUTTON_W, 9, BUTTON_W, BUTTON_H };
 
     return 0;
 }
@@ -112,8 +113,8 @@ void eventpoll() {
                 touch_winx = e.tfinger.x * ui_surface->w;
                 touch_winy = e.tfinger.y * ui_surface->h;
 
-                if (touch_winx > button_rect.x && touch_winx < button_rect.x+button_rect.w &&
-                    touch_winy > button_rect.y && touch_winy < button_rect.y+button_rect.h) {
+                if (touch_winx > button_rect.x-BUTTON_MARGIN && touch_winx < button_rect.x+button_rect.w+BUTTON_MARGIN &&
+                    touch_winy > button_rect.y-BUTTON_MARGIN && touch_winy < button_rect.y+button_rect.h+BUTTON_MARGIN) {
                     switch (g.state) {
                         case RUNNING:
                             g.state = PAUSE;

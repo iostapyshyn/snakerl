@@ -21,8 +21,8 @@ typedef struct {
     direction dir;
     int level;
     struct {
-        size_t len;
-        size_t cap;
+        int len;
+        int cap;
         vec2i *seg;
     } snake;
     vec2i food;
