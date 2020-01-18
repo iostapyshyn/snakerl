@@ -14,7 +14,7 @@
 #define STBI_REALLOC SDL_realloc
 #define STBI_FREE SDL_free
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "stb/stb_image.h"
 
 #define max(x,y) ((x) >= (y)) ? (x) : (y)
 #define min(x,y) ((x) <= (y)) ? (x) : (y)
