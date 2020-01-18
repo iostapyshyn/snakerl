@@ -8,7 +8,6 @@
 #include "const.h"
 #include "game.h"
 #include "ui.h"
-#include "stb_image.h"
 
 #define BUTTON_W 22
 #define BUTTON_H 22
