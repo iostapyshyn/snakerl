@@ -26,6 +26,8 @@ extern int ui_rows, ui_cols;
 extern SDL_Window *ui_window;
 extern SDL_Surface *ui_surface;
 
+SDL_Surface *ui_loadtexture(const char *filename);
+
 int ui_init(const char *title, const char *filename, int w, int h);
 void ui_quit(void);
 

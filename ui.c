@@ -2,6 +2,17 @@
 #include <math.h>
 #include "ui.h"
 
+/* Make stb_image use SDL memory allocation functions.
+ * In that way, by clearing SDL_PREALLOC flag of the surface
+ * the pixels data obtained with stbi_load will be freed automatically with SDL_FreeSurface.
+ * This is a hack, but a reasonbly safe one, as stated by icculus:
+ * > https://twitter.com/icculus/status/667036586610139137
+ * The idea is taken from https://github.com/DanielGibson/Snippets collection of libs.
+ */
+
+#define STBI_MALLOC SDL_malloc
+#define STBI_REALLOC SDL_realloc
+#define STBI_FREE SDL_free
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -103,6 +114,29 @@ static int ui_loadfont(const char *filename, ui_font *font) {
     SDL_Log("%dx%d font %s successfully loaded.", font->char_w, font->char_h, filename);
 
     return 1;
+}
+
+SDL_Surface *ui_loadtexture(const char *filename) {
+    int w, h;
+    void *pixels = stbi_load(filename, &w, &h, NULL, STBI_rgb_alpha);
+    if (pixels == NULL) {
+        SDL_Log("Unable to load texture %s: %s", filename, stbi_failure_reason());
+        return NULL;
+    }
+    
+    /* By passing SDL_PIXELFORMAT_RGBA32, SDL_CreateRGBSurfaceWithFormatFrom takes into account endianness
+     * of the target machine, since pixels are actually treated as Uint32 inside. */
+    SDL_Surface *surf = SDL_CreateRGBSurfaceWithFormatFrom(pixels, w, h, 32, 4*w, SDL_PIXELFORMAT_RGBA32);
+    
+    if (surf != NULL) {
+        surf->flags &= ~SDL_PREALLOC; /* Free pixel data together with surface. */
+    } else {
+        SDL_Log("Unable to load texture %s: %s", filename, SDL_GetError());
+        stbi_image_free(pixels);
+        return NULL;
+    }
+    
+    return surf;
 }
 
 void ui_quit(void) {

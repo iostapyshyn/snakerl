@@ -12,7 +12,7 @@
 #define UI_ROWS 25
 
 static const char *title = "Snake";
-static const char *default_font = "fonts/terminus_11x11.bmp";
+static const char *default_font = "res/terminus_11x11.bmp";
 
 static const char food_symbol = '\1';
 

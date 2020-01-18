@@ -23,10 +23,20 @@ void eventpoll() {
                 g.state = QUIT;
                 break;
             case SDLK_RETURN:
-                game_continue();
+                if (g.state == MENU) {
+                    g.state = RUNNING;
+                } else if (g.state == LOST) {
+                    g.state = INIT;
+                }
+
                 break;
             case SDLK_p:
-                game_pause();
+                if (g.state == PAUSE) {
+                    g.state = RUNNING;
+                } else if (g.state == RUNNING) {
+                    g.state = PAUSE;
+                }
+
                 break;
             case SDLK_c:
                 /* Disable CRT effect. */
@@ -79,13 +89,13 @@ void eventpoll() {
 }
 
 void draw(void) {
+    ui_clear();
+
     if (g.state == MENU) {
         const int menu_x = ui_cols/2 - ARR_SIZE(menu_str)/2;
         const int menu_y = ui_rows/2 - nlevels/2;
 
         /* Present the level selection menu. */
-        ui_clear();
-#if 0
         ui_setfg(color_fg);
         ui_putstr(menu_x, menu_y, menu_str);
         for (int i = 0; i < nlevels; i++) {
@@ -96,32 +106,28 @@ void draw(void) {
             } else ui_setfg(color_fg);
             ui_putstr(menu_x, menu_y + 1 + i, levels[i].desc);
         }
-#endif
-        ui_putstr(ui_cols/2-sizeof("LOADING...")/2, ui_rows/2, "LOADING...");
+    } else {
+        ui_clear();
+        ui_setfg(color_fg);
 
-        ui_present();
-        return;
-    }
+        /* Draw the snake. The symbol selection algorithm chooses appropriate symbol for turns,
+         * see segment_symbol(int) in const.c. */
+        for (int i = g.snake.len-1; i >= 0; i--) {
+            ui_putch(g.snake.seg[i].x, g.snake.seg[i].y, segment_symbol(i));
+        }
 
-    ui_clear();
-    ui_setfg(color_fg);
+        /* Display food. */
+        ui_putch(g.food.x, g.food.y, food_symbol);
 
-    /* Draw the snake. The symbol selection algorithm chooses appropriate symbol for turns,
-     * see segment_symbol(int) in const.c. */
-    for (int i = g.snake.len-1; i >= 0; i--) {
-        ui_putch(g.snake.seg[i].x, g.snake.seg[i].y, segment_symbol(i));
-    }
+        /* Draw game over and pause messages on top, keeping the snake as the background. */
+        if (g.state == LOST) {
+            ui_setfg(color_message);
+            ui_putstr(ui_cols/2-ARR_SIZE(lost_str)/2, ui_rows/2, lost_str);
+        } else if (g.state == PAUSE) {
+            ui_setfg(color_message);
+            ui_putstr(ui_cols/2-ARR_SIZE(pause_str)/2, ui_rows/2, pause_str);
+        }
 
-    /* Display food. */
-    ui_putch(g.food.x, g.food.y, food_symbol);
-
-    /* Draw game over and pause messages on top, keeping the snake as the background. */
-    if (g.state == LOST) {
-        ui_setfg(color_message);
-        ui_putstr(ui_cols/2-ARR_SIZE(lost_str)/2, ui_rows/2, lost_str);
-    } else if (g.state == PAUSE) {
-        ui_setfg(color_message);
-        ui_putstr(ui_cols/2-ARR_SIZE(pause_str)/2, ui_rows/2, pause_str);
     }
 
     ui_present();

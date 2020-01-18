@@ -9,24 +9,10 @@ typedef enum {
     EMPTY, SNAKE, WALL, FOOD
 } cell_type;
 
+/* The g.state is RESTART by default. */
 game_data g = { 0 };
 
 static bool force_update = false;
-
-/* Selects the level or restarts the game if the game is over. */
-void game_continue(void) {
-    if (g.state == LOST) {
-        g.state = RESTART;
-    } else g.state = RUNNING;
-}
-
-/* Pause. */
-void game_pause(void) {
-    if (g.state == RUNNING)
-        g.state = PAUSE;
-    else if (g.state == PAUSE)
-        g.state = RUNNING;
-}
 
 void game_setdirection(direction newdir) {
     if (((newdir == UP || newdir == DOWN) && (g.dir == LEFT || g.dir == RIGHT)) ||
@@ -144,21 +130,22 @@ static void game_update() {
     }
 }
 
-static void game_free(void) {
+void game_quit(void) {
+    g.state = QUIT;
     free(g.snake.seg);
 }
 
 void game_run(void (*eventpoll)(void), void (*draw)(void)) {
-    game_init();
-
     uint32_t last_ticks = SDL_GetTicks();
     while (g.state != QUIT) {
-        eventpoll();
-
-        if (g.state == RESTART) {
+        if (g.state == INIT) {
             game_init();
             continue;
-        } else if (g.state == MENU) {
+        }
+        
+        eventpoll();
+
+        if (g.state == MENU) {
             if ((signed int) g.level > nlevels-1)
                 g.level = 0;
             else if ((signed int) g.level < 0)
@@ -176,5 +163,5 @@ void game_run(void (*eventpoll)(void), void (*draw)(void)) {
         draw();
     }
 
-    game_free();
+    game_quit();
 }

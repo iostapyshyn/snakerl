@@ -13,7 +13,7 @@ typedef enum {
 } direction;
 
 typedef enum {
-    MENU, RUNNING, PAUSE, LOST, RESTART, QUIT
+    INIT = 0, MENU, RUNNING, PAUSE, LOST, QUIT
 } game_state;
 
 typedef struct {
@@ -31,10 +31,7 @@ typedef struct {
 extern game_data g;
 
 void game_setdirection(direction newdir);
-void game_continue(void);
-void game_pause(void);
 void game_run(void (*eventpoll)(void), void (*present)(void));
-
-char segment_symbol(size_t i);
+void game_quit(void);
 
 #endif
