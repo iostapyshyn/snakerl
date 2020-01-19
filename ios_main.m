@@ -5,13 +5,42 @@
 //  Created by Ilya Ostapyshyn on 12.01.20.
 //
 
+#include "SDL_syswm.h"
 #include "const.h"
 #include "game.h"
 #include "ui.h"
 
+@import GoogleMobileAds;
+
+#import <GoogleMobileAds/GADInterstitial.h>
+#import <GoogleMobileAds/GADInterstitialDelegate.h>
+
 #define BUTTON_W 22
 #define BUTTON_H 22
 #define BUTTON_MARGIN 10
+
+UIViewController *rootViewController;
+
+@interface InterstitialAd : NSObject <GADInterstitialDelegate>
+@property(nonatomic, strong) GADInterstitial *interstitial;
+@end
+
+@implementation InterstitialAd
+- (void)reloadAd {
+    self.interstitial = [[GADInterstitial alloc] initWithAdUnitID:@"ca-app-pub-7578720684863061/9857633324"];
+    self.interstitial.delegate = self;
+    [self.interstitial loadRequest:[GADRequest request]];
+}
+- (void)interstitialDidDismissScreen:(GADInterstitial *)ad {
+    [self reloadAd];
+}
+- (void)interstitial:(GADInterstitial *)ad
+didFailToReceiveAdWithError:(GADRequestError *)error {
+    NSLog(@"interstitial:didFailToReceiveAdWithError: %@", [error localizedDescription]);
+}
+@end
+
+InterstitialAd *ad;
 
 SDL_Surface *arrow_tex;
 SDL_Surface *pause_tex;
@@ -43,10 +72,26 @@ int app_init() {
     /* Set up the target rectangle area for the button in the top-left corner. */
     button_rect = (SDL_Rect) { ui_surface->w - 16 - BUTTON_W, 9, BUTTON_W, BUTTON_H };
 
+    /* Get the root view controller for ad presentation. */
+    SDL_SysWMinfo wm_info;
+    SDL_VERSION(&wm_info.version);
+    SDL_GetWindowWMInfo(ui_window, &wm_info);
+    rootViewController = wm_info.info.uikit.window.rootViewController;
+
+    /* Initialize the ad interface. */
+    [[GADMobileAds sharedInstance] startWithCompletionHandler:nil];
+    ad = [InterstitialAd alloc];
+    [ad reloadAd];
+
+    /* Targeting? */
+    GADRequestConfiguration requestConfiguration = GADMobileAds.sharedInstance.requestConfiguration;
+
     return 0;
 }
 
 void app_terminate() {
+    [ad release];
+
     SDL_FreeSurface(arrow_tex);
     SDL_FreeSurface(continue_tex);
     SDL_FreeSurface(pause_tex);
@@ -188,11 +233,25 @@ void draw(void) {
         /* Display food. */
         ui_putch(g.food.x, g.food.y, food_symbol);
 
+        /* Simple flag to show the ad only once after player loses. */
+        static bool ad_shown;
         /* Draw game over and pause messages on top, keeping the snake as the background. */
         if (g.state == LOST) {
+            if (!ad_shown) {
+                if (ad.interstitial.isReady) {
+                    [ad.interstitial presentFromRootViewController:rootViewController];
+                } else {
+                    NSLog(@"The losing screen interstitial ad wasn't ready.");
+                }
+
+                ad_shown = true;
+            }
+
             ui_setfg(color_message);
             ui_putstr(ui_cols/2-ARR_SIZE(lost_str)/2, ui_rows/2, lost_str);
-        } else if (g.state == PAUSE) {
+        } else ad_shown = false;
+
+        if (g.state == PAUSE) {
             ui_setfg(color_message);
             ui_putstr(ui_cols/2-ARR_SIZE(pause_str)/2, ui_rows/2, pause_str);
         }
