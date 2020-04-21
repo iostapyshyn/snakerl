@@ -34,8 +34,7 @@ UIViewController *rootViewController;
 - (void)interstitialDidDismissScreen:(GADInterstitial *)ad {
     [self reloadAd];
 }
-- (void)interstitial:(GADInterstitial *)ad
-didFailToReceiveAdWithError:(GADRequestError *)error {
+- (void)interstitial:(GADInterstitial *)ad didFailToReceiveAdWithError:(GADRequestError *)error {
     NSLog(@"interstitial:didFailToReceiveAdWithError: %@", [error localizedDescription]);
 }
 @end
@@ -82,9 +81,6 @@ int app_init() {
     [[GADMobileAds sharedInstance] startWithCompletionHandler:nil];
     ad = [InterstitialAd alloc];
     [ad reloadAd];
-
-    /* Targeting? */
-    GADRequestConfiguration requestConfiguration = GADMobileAds.sharedInstance.requestConfiguration;
 
     return 0;
 }
