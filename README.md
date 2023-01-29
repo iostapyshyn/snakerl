@@ -1,1 +1,3 @@
 # snakerl
+
+![Screenshot](./screenshot.png)

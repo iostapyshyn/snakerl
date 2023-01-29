@@ -10,5 +10,7 @@ set(CMAKE_C_EXTENSIONS no)
 # Examples
 add_executable(snakerl main.c game.c ui.c const.c)
 
+include_directories(${SDL2_INCLUDE_DIRS})
+
 target_link_libraries(snakerl ${SDL2_LIBRARIES})
 target_link_libraries(snakerl m)
